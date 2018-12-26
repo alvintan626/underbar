@@ -210,12 +210,20 @@
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
     // TIP: Try re-using reduce() here.
+    iterator = iterator || _.identity;
+    return !!_.reduce(collection, function(test, item) {
+      return test && iterator(item);
+    }, true);
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
   _.some = function(collection, iterator) {
-    // TIP: There's a very clever way to re-use every() here.
+    // TIP: There's a very clever way to re-use every() here.'
+      iterator = iterator || _.identity;
+    return !!_.reduce(collection, function(test, item) {
+      return test || iterator(item);
+    }, false);
   };
 
 
@@ -238,11 +246,25 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
+    _.each(arguments, function(argObject) {
+      _.each(argObject, function(value, key) {
+        obj[key] = value;
+      });
+    });
+    return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    _.each(arguments, function(argObject) {
+      _.each(argObject, function(value, key) {
+        if (obj[key] === undefined) {
+          obj[key] = value;
+        }
+      });
+    });
+    return obj;
   };
 
 
@@ -260,17 +282,16 @@
     // TIP: These variables are stored in a "closure scope" (worth researching),
     // so that they'll remain available to the newly-generated function every
     // time it's called.
-    var alreadyCalled = false;
     var result;
-
+    var repeat = false;
     // TIP: We'll return a new function that delegates to the old one, but only
     // if it hasn't been called before.
     return function() {
-      if (!alreadyCalled) {
+      if (!repeat) {
         // TIP: .apply(this, arguments) is the standard way to pass on all of the
         // infromation from one function call to another.
         result = func.apply(this, arguments);
-        alreadyCalled = true;
+        repeat = true;
       }
       // The new function always returns the originally computed result.
       return result;
@@ -286,6 +307,16 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+    var storage = {};
+
+    return function() {
+      var arg = JSON.stringify(arguments);
+      if (!storage[arg]) {
+        storage[arg] = func.apply(this, arguments);
+      }
+
+      return storage[arg];
+    };
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -295,6 +326,10 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+    var args = Array.prototype.slice.call(arguments, 2);
+    setTimeout(function() {
+      func.apply(this, args);
+    }, wait);
   };
 
 
@@ -309,6 +344,18 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    var shuffled = [];
+    var arrayCopy = Array.prototype.slice.call(array);
+
+    var results = [];
+
+    for (var i = 0; i < array.length; i++) {
+      var randomizer = Math.floor(arrayCopy.length * Math.random());
+      results.push(arrayCopy[randomizer]);
+      arrayCopy.splice(randomizer,1);
+    }
+
+    return results;
   };
 
 
@@ -323,6 +370,15 @@
   // Calls the method named by functionOrKey on each value in the list.
   // Note: You will need to learn a bit about .apply to complete this.
   _.invoke = function(collection, functionOrKey, args) {
+    return _.map(collection, function(item) {
+      var method;
+      if (typeof(functionOrKey) === 'string') {
+        method = item[functionOrKey];
+      } else {
+        method = functionOrKey;
+      }
+      return method.apply(item, args);
+    });
   };
 
   // Sort the object's values by a criterion produced by an iterator.
@@ -330,6 +386,11 @@
   // of that string. For example, _.sortBy(people, 'name') should sort
   // an array of people by their name.
   _.sortBy = function(collection, iterator) {
+    if (typeof(iterator) === 'function') {
+      return collection.sort(function(a,b) {return iterator(a)-iterator(b)});
+    } else {
+      return collection.sort(function(a,b) {return a[iterator]-b[iterator]});
+    }
   };
 
   // Zip together two or more arrays with elements of the same index
@@ -338,6 +399,18 @@
   // Example:
   // _.zip(['a','b','c','d'], [1,2,3]) returns [['a',1], ['b',2], ['c',3], ['d',undefined]]
   _.zip = function() {
+    var longestArray = argumentsArray.sort(function(a,b) {return b.length - a.length})[0].length;
+    var resultsPrior = [];
+    var results = [];
+  
+    for (var i = 0; i < longestArray; i++) {
+      for (var j = 0; j < arguments.length; j++) {
+        resultsPrior.push(arguments[j][i]);
+      }
+      results.push(resultsPrior);
+      resultsPrior = [];
+    }
+    return results;
   };
 
   // Takes a multidimensional array and converts it to a one-dimensional array.
